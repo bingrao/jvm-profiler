@@ -68,10 +68,6 @@ public class JavaAgentFileTransformer implements ClassFileTransformer {
         String normalizedClassName = className.replaceAll("/", ".");
         logger.debug("Checking class for transform: " + normalizedClassName);
 
-//        if (!durationProfilingFilter.matchClass(normalizedClassName)
-//                && !argumentFilterProfilingFilter.matchClass(normalizedClassName)) {
-//            return null;
-//        }
         if (!durationProfilingFilter.matchClass(normalizedClassName)) {
             return null;
         }
@@ -103,7 +99,6 @@ public class JavaAgentFileTransformer implements ClassFileTransformer {
             logger.warn("Failed to transform class: " + normalizedClassName, ex);
             byteCode = null;
         }
-
         return byteCode;
     }
 
@@ -124,17 +119,6 @@ public class JavaAgentFileTransformer implements ClassFileTransformer {
                 method.addLocalVariable("startMillis_java_agent_instrument", CtClass.longType);
                 method.addLocalVariable("stopMillis_java_agent_instrument", CtClass.longType);
                 method.addLocalVariable("durationMillis_java_agent_instrument", CtClass.longType);
-
-//                method.insertBefore("{" +
-//                        "System.out.println(\"[JVM-Profiler]\tRDD_Start\t\" + $0 + " +
-//                        "\"\t\"  + java.net.InetAddress.getLocalHost().getHostName() + " +
-//                        "\"\t\" + System.currentTimeMillis());" +
-//                        "}");
-//                method.insertAfter("{" +
-//                        "System.out.println(\"[JVM-Profiler]\tRDD_End\t\" + $0 + " +
-//                        "\"\t\"  + java.net.InetAddress.getLocalHost().getHostName() + " +
-//                        "\"\t\" + System.currentTimeMillis());" +
-//                        "}");
 
                 method.insertBefore("{ startMillis_java_agent_instrument = System.currentTimeMillis(); }");
                 method.insertAfter("{" +
