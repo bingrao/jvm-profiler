@@ -38,13 +38,13 @@ public class ShutdownHookRunner implements Runnable {
 
     @Override
     public void run() {
-        logShutdownMessage("Running java agent shutdown");
+        logger.info("Running java agent shutdown");
         
         for (Profiler profiler : profilers) {
             try {
-                logShutdownMessage("Running periodic profiler (last run): " + profiler);
+                logger.info("Running periodic profiler (last run): " + profiler);
                 profiler.profile();
-                logShutdownMessage("Ran periodic profiler (last run): " + profiler);
+                logger.info("Ran periodic profiler (last run): " + profiler);
             } catch (Throwable ex) {
                 logger.warn("Failed to run periodic profiler (last run): " + profiler, ex);
             }
@@ -52,9 +52,9 @@ public class ShutdownHookRunner implements Runnable {
         
         for (Reporter r : reporters) {
             try {
-                logShutdownMessage("Closing reporter " + r);
+                logger.info("Closing reporter " + r);
                 r.close();
-                logShutdownMessage("Closed reporter " + r);
+                logger.info("Closed reporter " + r);
             } catch (Throwable ex) {
                 logger.warn("Failed to close reporter " + r + ", " + new Date() + ", " + System.currentTimeMillis(), ex);
             }
@@ -62,13 +62,13 @@ public class ShutdownHookRunner implements Runnable {
 
         for (AutoCloseable closeable : closeables) {
             // Do not use logger.warn here because the logger may depend on error log reporter which will be already closed here.
-            // So we use logShutdownMessage (System.out.println) to print out logs.
+            // So we use logger.info (System.out.println) to print out logs.
             try {
-                logShutdownMessage("Closing object " + closeable);
+                logger.info("Closing object " + closeable);
                 closeable.close();
-                logShutdownMessage("Closed object " + closeable );
+                logger.info("Closed object " + closeable );
             } catch (Throwable ex) {
-                logShutdownMessage("Failed to close object " + closeable);
+                logger.info("Failed to close object " + closeable);
                 ex.printStackTrace();
             }
         }

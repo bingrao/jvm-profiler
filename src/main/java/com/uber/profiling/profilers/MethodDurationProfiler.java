@@ -86,7 +86,7 @@ public class MethodDurationProfiler extends ProfilerBase implements Profiler {
             if (getCluster() != null) {
                 commonMap.put("cluster", getCluster());
             }
-            
+
             if (getRole() != null) {
                 commonMap.put("role", getRole());
             }

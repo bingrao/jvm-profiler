@@ -45,6 +45,19 @@ public class MethodProfilerStaticProxy {
             ex.printStackTrace();
         }
     }
+    
+    public static void collectMethodDuration(String className, String methodName, String metricName, long metricValue) {
+        if (collectorSingleton == null) {
+            return;
+        }
+
+        try {
+            collectorSingleton.collectLongMetric(className, methodName, metricName, metricValue);
+        } catch (Throwable ex) {
+            ex.printStackTrace();
+        }
+    }
+
 
     public static void collectMethodArgument(String className, String methodName, int argIndex, Object argValue) {
         if (argumentCollectorSingleton == null) {

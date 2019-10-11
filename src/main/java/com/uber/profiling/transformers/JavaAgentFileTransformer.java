@@ -16,6 +16,7 @@
 
 package com.uber.profiling.transformers;
 
+import com.uber.profiling.Profiler;
 import com.uber.profiling.util.AgentLogger;
 import com.uber.profiling.util.ClassAndMethod;
 import com.uber.profiling.util.ClassAndMethodFilter;
@@ -34,13 +35,13 @@ import java.util.List;
 
 public class JavaAgentFileTransformer implements ClassFileTransformer {
     private static final AgentLogger logger = AgentLogger.getLogger(JavaAgentFileTransformer.class.getName());
-
     private ClassAndMethodFilter durationProfilingFilter;
     private ClassMethodArgumentFilter argumentFilterProfilingFilter;
-
     public JavaAgentFileTransformer(List<ClassAndMethod> durationProfiling, List<ClassMethodArgument> argumentProfiling) {
         this.durationProfilingFilter = new ClassAndMethodFilter(durationProfiling);
         this.argumentFilterProfilingFilter = new ClassMethodArgumentFilter(argumentProfiling);
+        logger.info("Got argument value for durationProfiling: " + durationProfilingFilter);
+        logger.info("Got argument value for argumentFilterProfiling: " + argumentFilterProfilingFilter);
     }
 
     @Override
@@ -60,14 +61,18 @@ public class JavaAgentFileTransformer implements ClassFileTransformer {
     private byte[] transformImpl(ClassLoader loader, String className, byte[] classfileBuffer) {
         if (durationProfilingFilter.isEmpty()
                 && argumentFilterProfilingFilter.isEmpty()) {
+            logger.warn("Please check input arguments");
             return null;
         }
 
         String normalizedClassName = className.replaceAll("/", ".");
         logger.debug("Checking class for transform: " + normalizedClassName);
 
-        if (!durationProfilingFilter.matchClass(normalizedClassName)
-                && !argumentFilterProfilingFilter.matchClass(normalizedClassName)) {
+//        if (!durationProfilingFilter.matchClass(normalizedClassName)
+//                && !argumentFilterProfilingFilter.matchClass(normalizedClassName)) {
+//            return null;
+//        }
+        if (!durationProfilingFilter.matchClass(normalizedClassName)) {
             return null;
         }
 
@@ -113,43 +118,33 @@ public class JavaAgentFileTransformer implements ClassFileTransformer {
         }
 
         try {
+
             if (enableDurationProfiling) {
+
                 method.addLocalVariable("startMillis_java_agent_instrument", CtClass.longType);
+                method.addLocalVariable("stopMillis_java_agent_instrument", CtClass.longType);
                 method.addLocalVariable("durationMillis_java_agent_instrument", CtClass.longType);
-            }
 
-            StringBuilder sb = new StringBuilder();
-            sb.append("{");
+//                method.insertBefore("{" +
+//                        "System.out.println(\"[JVM-Profiler]\tRDD_Start\t\" + $0 + " +
+//                        "\"\t\"  + java.net.InetAddress.getLocalHost().getHostName() + " +
+//                        "\"\t\" + System.currentTimeMillis());" +
+//                        "}");
+//                method.insertAfter("{" +
+//                        "System.out.println(\"[JVM-Profiler]\tRDD_End\t\" + $0 + " +
+//                        "\"\t\"  + java.net.InetAddress.getLocalHost().getHostName() + " +
+//                        "\"\t\" + System.currentTimeMillis());" +
+//                        "}");
 
-            if (enableDurationProfiling) {
-                sb.append("startMillis_java_agent_instrument = System.currentTimeMillis();");
-            }
-
-            for (Integer argument : argumentsForProfile) {
-                if (argument >= 1) {
-                    sb.append(String.format("try{com.uber.profiling.transformers.MethodProfilerStaticProxy.collectMethodArgument(\"%s\", \"%s\", %s, String.valueOf($%s));}catch(Throwable ex){ex.printStackTrace();}",
-                            normalizedClassName,
-                            method.getName(),
-                            argument,
-                            argument));
-                } else {
-                    sb.append(String.format("try{com.uber.profiling.transformers.MethodProfilerStaticProxy.collectMethodArgument(\"%s\", \"%s\", %s, \"\");}catch(Throwable ex){ex.printStackTrace();}",
-                            normalizedClassName,
-                            method.getName(),
-                            argument,
-                            argument));
-                }
-            }
-
-            sb.append("}");
-
-            method.insertBefore(sb.toString());
-
-            if (enableDurationProfiling) {
+                method.insertBefore("{ startMillis_java_agent_instrument = System.currentTimeMillis(); }");
                 method.insertAfter("{" +
-                        "durationMillis_java_agent_instrument = System.currentTimeMillis() - startMillis_java_agent_instrument;" +
-                        String.format("try{com.uber.profiling.transformers.MethodProfilerStaticProxy.collectMethodDuration(\"%s\", \"%s\", durationMillis_java_agent_instrument);}catch(Throwable ex){ex.printStackTrace();}", normalizedClassName, method.getName()) +
-                        // "System.out.println(\"Method Executed in ms: \" + durationMillis);" +
+                        "stopMillis_java_agent_instrument = System.currentTimeMillis();" +
+                        "durationMillis_java_agent_instrument = stopMillis_java_agent_instrument - startMillis_java_agent_instrument;" +
+                        "System.out.println(\"[JVM-Profiler] RDD\t\" + $0 + " +
+                        "\"\t\"  + java.net.InetAddress.getLocalHost().getHostName() + " +
+                        "\"\t\"  + startMillis_java_agent_instrument + " +
+                        "\"\t\"  + stopMillis_java_agent_instrument + " +
+                        "\"\t\" + durationMillis_java_agent_instrument);" +
                         "}");
             }
 

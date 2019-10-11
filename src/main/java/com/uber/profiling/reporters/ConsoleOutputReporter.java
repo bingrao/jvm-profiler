@@ -16,16 +16,20 @@
 
 package com.uber.profiling.reporters;
 
+import com.uber.profiling.Arguments;
 import com.uber.profiling.Reporter;
+import com.uber.profiling.util.AgentLogger;
 import com.uber.profiling.util.JsonUtils;
 
 import java.util.List;
 import java.util.Map;
 
 public class ConsoleOutputReporter implements Reporter {
+
+    private static final AgentLogger logger = AgentLogger.getLogger(ConsoleOutputReporter.class.getName());
     @Override
     public void report(String profilerName, Map<String, Object> metrics) {
-        System.out.println(String.format("ConsoleOutputReporter - %s: %s", profilerName, JsonUtils.serialize(metrics)));
+        logger.info(String.format("- %s: %s", profilerName, JsonUtils.serialize(metrics)));
     }
 
     @Override

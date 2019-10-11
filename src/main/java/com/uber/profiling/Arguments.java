@@ -106,7 +106,6 @@ public class Arguments {
             }
             list.add(strs[1].trim());
         }
-
         return new Arguments(map);
     }
 

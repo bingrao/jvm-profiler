@@ -16,12 +16,14 @@
 
 package com.uber.profiling;
 
+import com.uber.profiling.util.AgentLogger;
+
 import java.lang.instrument.Instrumentation;
 
 public final class Agent {
 
     private static AgentImpl agentImpl = new AgentImpl();
-
+    private static final AgentLogger logger = AgentLogger.getLogger(Agent.class.getName());
     private Agent() {
     }
 
@@ -30,10 +32,12 @@ public final class Agent {
     }
 
     public static void premain(final String args, final Instrumentation instrumentation) {
-        System.out.println("Java Agent " + AgentImpl.VERSION + " premain args: " + args);
+        logger.info("Java Agent " + AgentImpl.VERSION + " premain args: " + args);
 
         Arguments arguments = Arguments.parseArgs(args);
         arguments.runConfigProvider();
+
+
         agentImpl.run(arguments, instrumentation, null);
     }
 }

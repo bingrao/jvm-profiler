@@ -44,13 +44,15 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 public class AgentImpl {
-    public static final String VERSION = "1.0.0";
+    public static final String VERSION = "2.0.0";
     
     private static final AgentLogger logger = AgentLogger.getLogger(AgentImpl.class.getName());
 
     private static final int MAX_THREAD_POOL_SIZE = 2;
 
     private boolean started = false;
+
+    private List<Profiler> profilerList = null;
 
     public void run(Arguments arguments, Instrumentation instrumentation, Collection<AutoCloseable> objectsToCloseOnShutdown) {
         if (arguments.isNoop()) {
@@ -78,10 +80,13 @@ public class AgentImpl {
             instrumentation.addTransformer(new JavaAgentFileTransformer(arguments.getDurationProfiling(), arguments.getArgumentProfiling()));
         }
 
-        List<Profiler> profilers = createProfilers(reporter, arguments, processUuid, appId);
+        profilerList = createProfilers(reporter, arguments, processUuid, appId);
         
-        ProfilerGroup profilerGroup = startProfilers(profilers);
+        ProfilerGroup profilerGroup = startProfilers(profilerList);  // start all profiler
 
+        /**
+         *  Create a shutdown hook thread to stop the period profilers
+         */
         Thread shutdownHook = new Thread(new ShutdownHookRunner(profilerGroup.getPeriodicProfilers(), Arrays.asList(reporter), objectsToCloseOnShutdown));
         Runtime.getRuntime().addShutdownHook(shutdownHook);
     }
@@ -114,7 +119,7 @@ public class AgentImpl {
             }
         }
 
-        for (Profiler profiler : periodicProfilers) {
+        for (Profiler profiler : periodicProfilers) {  // first run profilers in a period time
             try {
                 profiler.profile();
                 logger.info("Ran periodic profiler (first run): " + profiler);
@@ -216,6 +221,10 @@ public class AgentImpl {
         return profilers;
     }
 
+    /**
+     *  Create an executor with "profiler.size" number of threads for each profiler
+     * @param profilers
+     */
     private void scheduleProfilers(Collection<Profiler> profilers) {
         int threadPoolSize = Math.min(profilers.size(), MAX_THREAD_POOL_SIZE);
         ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(threadPoolSize, new AgentThreadFactory());
@@ -224,8 +233,9 @@ public class AgentImpl {
             if (profiler.getIntervalMillis() < Arguments.MIN_INTERVAL_MILLIS) {
                 throw new RuntimeException("Interval too short for profiler: " + profiler + ", must be at least " + Arguments.MIN_INTERVAL_MILLIS);
             }
-            
+            /* Create a Thread Runner for each profiler*/
             ProfilerRunner worker = new ProfilerRunner(profiler);
+            /* add this Runner to existing  executor, and run*/
             scheduledExecutorService.scheduleAtFixedRate(worker, 0, profiler.getIntervalMillis(), TimeUnit.MILLISECONDS);
             logger.info(String.format("Scheduled profiler %s with interval %s millis", profiler, profiler.getIntervalMillis()));
         }
