@@ -82,6 +82,7 @@ public class JavaAgentFileTransformer implements ClassFileTransformer {
             final CtClass ctClass;
             try (ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(classfileBuffer)) {
                 ctClass = classPool.makeClass(byteArrayInputStream);
+                ctClass.
             }
             
             CtMethod[] ctMethods = ctClass.getDeclaredMethods();
